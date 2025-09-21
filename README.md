@@ -16,3 +16,37 @@ GPT for developers to ship reliable softwares. This tool is intended for Develop
 
 - PR Request Review (Self review is better before sharing others)
 - QA Testing Plan (You built a feature, now let AI plan how to break it)
+
+## Folder Structure
+testergpt/
+├── manage.py
+├── testergpt/                 
+│   ├── settings.py
+│   ├── urls.py
+│   ├── celery.py              # Celery app config
+│   └── __init__.py            # load celery
+│
+├── github_integration/
+│   ├── views.py               # webhook receives PR event
+│   ├── tasks.py               # enqueue review orchestrator
+│   ├── services.py
+│   ├── models.py
+│   └── utils.py
+│
+├── reviews/
+│   ├── services.py            # AI logic
+│   ├── orchestrator.py        # main review workflow
+│   └── utils.py
+│
+├── core/
+│   ├── ai_client.py
+│   ├── github_client.py
+│   └── logging.py
+│
+└── requirements.txt
+
+## Tech-Stack
+- Django, DRF
+- Celery
+- Selenium / Browser-Use
+- Gemini / Claude AI
