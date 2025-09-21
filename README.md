@@ -18,6 +18,7 @@ GPT for developers to ship reliable softwares. This tool is intended for Develop
 - QA Testing Plan (You built a feature, now let AI plan how to break it)
 
 ## Folder Structure
+```
 testergpt/
 ├── manage.py
 ├── testergpt/                 
@@ -44,9 +45,12 @@ testergpt/
 │   └── logging.py
 │
 └── requirements.txt
-
+```
 ## Tech-Stack
 - Django, DRF
 - Celery
 - Selenium / Browser-Use
 - Gemini / Claude AI
+
+## Architechture
+![Tester GPT](https://github.com/sourabhmandal/testergpt/blob/main/assets/architechture.svg)
