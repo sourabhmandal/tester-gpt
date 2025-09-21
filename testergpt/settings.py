@@ -11,24 +11,26 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# pydantic env parser
 class Settings(BaseSettings):
+    APP_VERSION: str
+    ENVIRONMENT: str
     DATABASE_URL: str
     DEBUG: bool = False
     PORT: int = 5000
     ALLOWED_HOSTS: list[str] = ["*"]
     SECRET_KEY: str = 'django-insecure-66#o%971*dr0+mh9byikg^pdb*f!+fv$$es!!iome!q@bg0f4-'
+    GITHUB_SECRET: str = "ghp_YourGitHubTokenHere"
+    GPT_API_KEY: str = "sk-YourAIKeyHere"
+    
 
     class Config:
         env_file = ".env"   # Pydantic will load from .env
 
-# create a single instance
 settings = Settings()
 
 
