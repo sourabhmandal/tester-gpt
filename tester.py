@@ -7,7 +7,7 @@ def review_pr_file(filename: str, diff: str) -> dict:
     Runs LLM review on a file diff and returns structured JSON:
     {
       "comments": [
-        {"body": "....", "line": 12, "side": "RIGHT"}
+        {"body": ".....", "line": 12, "side": "RIGHT"}
       ],
       "summary": "..."
     }
