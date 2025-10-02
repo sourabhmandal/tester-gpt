@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 def read_github_private_key() -> str:
     """Read GitHub private key from file"""
     try:
-        key_file_path = Path(BASE_DIR).joinpath("permfiles", "testergpt.github.pem")
+        key_file_path = Path(BASE_DIR).joinpath("pemfiles", "testergpt.github.pem")
         if key_file_path.exists():
             return key_file_path.read_text(encoding='utf-8').strip()
         else:
@@ -46,7 +46,33 @@ class Settings(BaseSettings):
         super().__init__(**kwargs)
         # Read GitHub private key from file if not provided in env
         if not self.GITHUB_PRIVATE_KEY:
-            self.GITHUB_PRIVATE_KEY = read_github_private_key()    
+            self.GITHUB_PRIVATE_KEY = read_github_private_key()
+        
+        # Validate GitHub App configuration
+        self._validate_github_config()
+    
+    def _validate_github_config(self):
+        """Validate GitHub App configuration"""
+        issues = []
+        
+        if not self.GITHUB_APP_ID or self.GITHUB_APP_ID == 0:
+            issues.append("GITHUB_APP_ID is not set or is 0")
+        
+        if not self.GITHUB_PRIVATE_KEY:
+            issues.append("GITHUB_PRIVATE_KEY is not available (check .env file or pemfiles/testergpt.github.pem)")
+        elif not self.GITHUB_PRIVATE_KEY.startswith("-----BEGIN"):
+            issues.append("GITHUB_PRIVATE_KEY does not appear to be a valid PEM format")
+        
+        if not self.GITHUB_SECRET or self.GITHUB_SECRET == "ghp_YourGitHubTokenHere":
+            issues.append("GITHUB_SECRET is not configured (using placeholder value)")
+        
+        if issues:
+            print("⚠️  GitHub App Configuration Issues:")
+            for issue in issues:
+                print(f"   - {issue}")
+            print("   GitHub webhook functionality may not work properly.")
+        else:
+            print("✅ GitHub App configuration appears valid")    
 
     class Config:
         env_file = ".env"   # Pydantic will load from .env

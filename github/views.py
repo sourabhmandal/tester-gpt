@@ -24,20 +24,38 @@ def health_check(request):
 def github_webhook(request):
     event = request.headers.get("X-GitHub-Event", "unknown")
     delivery = request.headers.get("X-GitHub-Delivery", "unknown")
-    try:
-        payload = GithubPRChanged(**request.data)
-    except Exception:
-        payload = None
-
+    
     # handle events
     print(f"Received event={event} delivery={delivery}")
     if event == "ping":
         return Response({"msg": "pong"}, status=200)
-    if event in ["opened", "synchronize", "pull_request", "push"]:
-        diff_text = get_pr_content(payload)
-        # ai
-        review_response = review_diff(diff=diff_text)
-        post_pr_comments(payload, review_response=review_response)
+    
+    # Only process pull request related events
+    if event == "pull_request" and request.data.get("action") in ["opened", "synchronize"]:
+        try:
+            payload = GithubPRChanged(**request.data)
+            print(f"✅ Successfully parsed webhook payload for PR #{payload.number}: {payload.pull_request.title}")
+        except Exception as e:
+            print(f"Failed to parse webhook payload: {e}")
+            print(f"Request data keys: {list(request.data.keys()) if hasattr(request, 'data') else 'No data'}")
+            return Response({"error": "Invalid payload structure"}, status=400)
+        
+        try:
+            print(f"🔍 Fetching diff content for PR #{payload.number}")
+            diff_text = get_pr_content(payload)
+            print(f"📄 Retrieved diff content ({len(diff_text)} characters)")
+            
+            # ai
+            print(f"🤖 Running AI review on diff...")
+            review_response = review_diff(diff=diff_text)
+            print(f"📝 AI review completed with {len(review_response.issues) if review_response.issues else 0} issues found")
+            
+            post_pr_comments(payload, review_response=review_response)
+            print(f"✅ Successfully processed PR #{payload.number}")
+        except Exception as e:
+            print(f"Error processing pull request: {e}")
+            return Response({"error": "Failed to process pull request"}, status=500)
+    
     return Response("", status=204)
 
 def post_pr_comments(payload: GithubPRChanged, review_response: PRReviewResponse):
@@ -45,48 +63,57 @@ def post_pr_comments(payload: GithubPRChanged, review_response: PRReviewResponse
         print("No issues found in the diff, skipping comment posting")
         return
 
-    # Step 1: Generate JWT
-    jwt_token = generate_jwt()
+    if not payload or not payload.pull_request:
+        print("Invalid payload data, cannot post comments")
+        return
 
-    # Step 2: Exchange for installation token
-    installation_id = payload.installation.id
-    installation_token = get_installation_token(jwt_token, installation_id)
+    try:
+        # Step 1: Generate JWT
+        jwt_token = generate_jwt()
 
-    # GitHub API endpoint
-    url = GITHUB_COMMIT_INLINE_COMMENT_URL_TEMPLATE.format(
-        owner=payload.repository.owner.login,
-        repo=payload.repository.name,
-        pull_number=payload.pull_request.number,
-    )
+        # Step 2: Exchange for installation token
+        installation_id = payload.installation.id
+        installation_token = get_installation_token(jwt_token, installation_id)
 
-    print(f"Calling PR Comment URL: {url}")
+        # GitHub API endpoint
+        url = GITHUB_COMMIT_INLINE_COMMENT_URL_TEMPLATE.format(
+            owner=payload.repository.owner.login,
+            repo=payload.repository.name,
+            pull_number=payload.pull_request.number,
+        )
 
-    headers = {
-        "Authorization": f"Bearer {installation_token}",
-        "Accept": "application/vnd.github+json"
-    }
+        print(f"Calling PR Comment URL: {url}")
 
-    successful_comments = 0
-    for issue in review_response.issues:
-        emoji = {"error": "🚫", "warning": "⚠️", "suggestion": "💡"}.get(issue.type, "ℹ️")
-        comment_body = f"{emoji} **{issue.type.title()}** ({issue.severity} severity)\\n\\n{issue.message}"
-
-        line_num = int(issue.line.split("-")[0]) if "-" in issue.line else int(issue.line)
-
-        api_payload = {
-            "body": comment_body,
-            "commit_id": payload.pull_request.head.sha,
-            "path": issue.file,
-            "line": line_num,
-            "side": "RIGHT"
+        headers = {
+            "Authorization": f"Bearer {installation_token}",
+            "Accept": "application/vnd.github+json"
         }
 
-        print(f"📝 Posting PR comment to {issue.file}:{line_num}")
-        response = requests.post(url, json=api_payload, headers=headers)
-        if response.status_code == 201:
-            print(f"✅ Posted comment for {issue.file}:{line_num}")
-            successful_comments += 1
-        else:
-            print(f"❌ Failed ({response.status_code}): {response.text}")
+        successful_comments = 0
+        for issue in review_response.issues:
+            emoji = {"error": "🚫", "warning": "⚠️", "suggestion": "💡"}.get(issue.type, "ℹ️")
+            comment_body = f"{emoji} **{issue.type.title()}** ({issue.severity} severity)\\n\\n{issue.message}"
+
+            line_num = int(issue.line.split("-")[0]) if "-" in issue.line else int(issue.line)
+
+            api_payload = {
+                "body": comment_body,
+                "commit_id": payload.pull_request.head.sha,
+                "path": issue.file,
+                "line": line_num,
+                "side": "RIGHT"
+            }
+
+            print(f"📝 Posting PR comment to {issue.file}:{line_num}")
+            response = requests.post(url, json=api_payload, headers=headers)
+            if response.status_code == 201:
+                print(f"✅ Posted comment for {issue.file}:{line_num}")
+                successful_comments += 1
+            else:
+                print(f"❌ Failed ({response.status_code}): {response.text}")
+        
+        print(f"🎯 Posted {successful_comments}/{len(review_response.issues)} comments successfully")
     
-    print(f"🎯 Posted {successful_comments}/{len(review_response.issues)} comments successfully")
+    except Exception as e:
+        print(f"Error posting PR comments: {e}")
+        raise
