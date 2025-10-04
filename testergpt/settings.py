@@ -16,18 +16,20 @@ from pydantic_settings import BaseSettings
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 def read_github_private_key() -> str:
     """Read GitHub private key from file"""
     try:
         key_file_path = Path(BASE_DIR).joinpath("pemfiles", "testergpt.github.pem")
         if key_file_path.exists():
-            return key_file_path.read_text(encoding='utf-8').strip()
+            return key_file_path.read_text(encoding="utf-8").strip()
         else:
             print(f"Warning: GitHub private key file not found at {key_file_path}")
             return ""
     except Exception as e:
         print(f"Error reading GitHub private key: {e}")
         return ""
+
 
 class Settings(BaseSettings):
     APP_VERSION: str
@@ -36,49 +38,53 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     PORT: int = 5000
     ALLOWED_HOSTS: list[str] = ["*"]
-    SECRET_KEY: str = 'django-insecure-66#o%971*dr0+mh9byikg^pdb*f!+fv$$es!!iome!q@bg0f4-'
+    SECRET_KEY: str = (
+        "django-insecure-66#o%971*dr0+mh9byikg^pdb*f!+fv$$es!!iome!q@bg0f4-"
+    )
     GITHUB_SECRET: str = "ghp_YourGitHubTokenHere"
     GPT_API_KEY: str = "sk-YourAIKeyHere"
     GITHUB_APP_ID: int = 0
     GITHUB_PRIVATE_KEY: str = ""
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Read GitHub private key from file if not provided in env
         if not self.GITHUB_PRIVATE_KEY:
             self.GITHUB_PRIVATE_KEY = read_github_private_key()
-        
+
         # Validate GitHub App configuration
         self._validate_github_config()
-    
+
     def _validate_github_config(self):
         """Validate GitHub App configuration"""
         issues = []
-        
+
         if not self.GITHUB_APP_ID or self.GITHUB_APP_ID == 0:
             issues.append("GITHUB_APP_ID is not set or is 0")
-        
+
         if not self.GITHUB_PRIVATE_KEY:
-            issues.append("GITHUB_PRIVATE_KEY is not available (check .env file or pemfiles/testergpt.github.pem)")
+            issues.append(
+                "GITHUB_PRIVATE_KEY is not available (check .env file or pemfiles/testergpt.github.pem)"
+            )
         elif not self.GITHUB_PRIVATE_KEY.startswith("-----BEGIN"):
             issues.append("GITHUB_PRIVATE_KEY does not appear to be a valid PEM format")
-        
+
         if not self.GITHUB_SECRET or self.GITHUB_SECRET == "ghp_YourGitHubTokenHere":
             issues.append("GITHUB_SECRET is not configured (using placeholder value)")
-        
+
         if issues:
             print("⚠️  GitHub App Configuration Issues:")
             for issue in issues:
                 print(f"   - {issue}")
             print("   GitHub webhook functionality may not work properly.")
         else:
-            print("✅ GitHub App configuration appears valid")    
+            print("✅ GitHub App configuration appears valid")
 
     class Config:
-        env_file = ".env"   # Pydantic will load from .env
+        env_file = ".env"  # Pydantic will load from .env
+
 
 settings = Settings()
-
 
 
 # Quick-start development settings - unsuitable for production
@@ -96,54 +102,54 @@ ALLOWED_HOSTS = settings.ALLOWED_HOSTS
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'testergpt',
-    'github'
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "testergpt",
+    "github",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'testergpt.urls'
+ROOT_URLCONF = "testergpt.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'testergpt.wsgi.application'
+WSGI_APPLICATION = "testergpt.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -153,16 +159,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -170,9 +176,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -182,64 +188,64 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
     ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
     ],
 }
 
 # Logging Configuration
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
         },
     },
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
         },
         # Suppress Google Auth and gRPC warnings
-        'google.auth': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
+        "google.auth": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
-        'google.auth.transport': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
+        "google.auth.transport": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
-        'urllib3.connectionpool': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
+        "urllib3.connectionpool": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
-        'grpc': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
+        "grpc": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
     },
 }

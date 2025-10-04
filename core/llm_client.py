@@ -5,15 +5,18 @@ from github.types import GithubPRChanged
 from testergpt.settings import settings
 from core.types import PRReviewResponse
 
+
 def get_llm(model="gemini-2.5-pro", temperature=0.2):
     """Return a LangChain LLM instance with proper error handling"""
     if not settings.GPT_API_KEY or settings.GPT_API_KEY == "sk-YourAIKeyHere":
-        raise ValueError("Google API key is not configured. Please set GPT_API_KEY in your .env file")
-    
+        raise ValueError(
+            "Google API key is not configured. Please set GPT_API_KEY in your .env file"
+        )
+
     try:
         return ChatGoogleGenerativeAI(
-            model=model, 
-            temperature=temperature, 
+            model=model,
+            temperature=temperature,
             google_api_key=settings.GPT_API_KEY,
             convert_system_message_to_human=True,
         )
@@ -21,31 +24,33 @@ def get_llm(model="gemini-2.5-pro", temperature=0.2):
         logging.error(f"Failed to initialize LLM client: {e}")
         raise
 
+
 def review_pr(diff: str) -> PRReviewResponse:
     """Send a diff to LLM and return structured JSON response"""
     if not diff or not diff.strip():
         raise ValueError("Diff content is empty or invalid")
-    
+
     try:
         return flow_syntax_and_semantic_check(diff, model="gemini-2.5-pro")
     except Exception as e:
         logging.error(f"Error in review_pr: {e}")
         # Return a fallback response with proper structure
         fallback_response = PRReviewResponse(
-            issues=[],
-            summary=f"Error occurred during code review: {str(e)}"
+            issues=[], summary=f"Error occurred during code review: {str(e)}"
         )
         return fallback_response
 
 
-def flow_syntax_and_semantic_check(diff: str, model="gemini-2.5-pro") -> PRReviewResponse:
+def flow_syntax_and_semantic_check(
+    diff: str, model="gemini-2.5-pro"
+) -> PRReviewResponse:
     """Perform syntax and semantic analysis on code diff"""
     if not diff or not diff.strip():
         raise ValueError("Diff content is empty or invalid")
-    
+
     try:
         llm = get_llm(model)
-        
+
         # Create structured output LLM
         structured_llm = llm.with_structured_output(PRReviewResponse)
 
@@ -119,18 +124,18 @@ def flow_syntax_and_semantic_check(diff: str, model="gemini-2.5-pro") -> PRRevie
         prompt = ChatPromptTemplate.from_template(template)
         chain = prompt | structured_llm
         response = chain.invoke({"diff": diff})
-        
+
         if not response:
             raise RuntimeError("Empty response from LLM")
-        
+
         # Response is already a PRReviewResponse object from structured output
         return response
-        
+
     except Exception as e:
         logging.error(f"Error in syntax_and_lint_check: {e}")
         # Return a fallback response with proper structure
         fallback_response = PRReviewResponse(
             issues=[],
-            summary=f"Error occurred during syntax and semantic analysis: {str(e)}"
+            summary=f"Error occurred during syntax and semantic analysis: {str(e)}",
         )
         return fallback_response
