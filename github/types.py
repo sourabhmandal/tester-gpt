@@ -1,7 +1,7 @@
 from ninja import Schema
 from typing import List, Optional
 from datetime import datetime
-from pydantic import RootModel
+from pydantic import RootModel, Field
 
 
 class GitHubUser(Schema):
@@ -303,4 +303,68 @@ class GithubCommitList(RootModel[List[GithubCommit]]):
     This allows direct array validation without a wrapper field.
     """
     root: List[GithubCommit]
+
+
+class GithubCommitDetailList(RootModel[List[GithubCommitDetail]]):
+    """
+    Represents a list of detailed GitHub commits with file changes and stats.
+    Used when the API returns commits with full diff information.
+    """
+    root: List[GithubCommitDetail]
+
+
+class GitHubReactions(Schema):
+    url: str
+    total_count: int
+    plus_one: int = Field(alias="+1")
+    minus_one: int = Field(alias="-1")
+    laugh: int
+    hooray: int
+    confused: int
+    heart: int
+    rocket: int
+    eyes: int
+
+
+class GitHubReviewCommentLinks(Schema):
+    self: dict  # {"href": str}
+    html: dict  # {"href": str}
+    pull_request: dict  # {"href": str}
+
+
+class ReviewComment(Schema):
+    url: str
+    pull_request_review_id: int
+    id: int
+    node_id: str
+    diff_hunk: str
+    path: str
+    commit_id: str
+    original_commit_id: str
+    user: GitHubUser
+    body: str
+    created_at: str
+    updated_at: str
+    html_url: str
+    pull_request_url: str
+    author_association: str
+    _links: GitHubReviewCommentLinks
+    reactions: GitHubReactions
+    start_line: Optional[int]
+    original_start_line: Optional[int]
+    start_side: Optional[str]
+    line: Optional[int]
+    original_line: Optional[int]
+    side: Optional[str]
+    original_position: Optional[int]
+    position: Optional[int]
+    subject_type: Optional[str]
+
+
+class ReviewCommentList(RootModel[List[ReviewComment]]):
+    """
+    Represents a list of GitHub pull request review comments.
+    Used for PR review comments API responses.
+    """
+    root: List[ReviewComment]
 

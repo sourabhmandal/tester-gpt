@@ -1,4 +1,4 @@
-from github.types import GithubCommit, GithubCommitDetail, GithubCommitList, GithubPRChanged
+from github.types import GithubCommitDetail, GithubCommitList, GithubPRChanged, ReviewCommentList
 import requests
 from unidiff import PatchSet
 
@@ -41,7 +41,7 @@ def get_pr_latest_commit_diff(pr: GithubPRChanged) -> str:
     print(f"PR Lines: {pr_line_data}")
     return pr_line_data
 
-def get_pr_diff(pr: GithubPRChanged) -> str:
+def get_pr_diff(pr: GithubPRChanged) -> ReviewCommentList:
     if not pr or not pr.pull_request:
         raise ValueError("Invalid pull request data provided")
     
@@ -72,13 +72,6 @@ def get_pr_comments(pr: GithubPRChanged) -> str:
 
     response = requests.get(review_comments_url)
     response.raise_for_status()  # Raise an exception for bad status codes
-    
-    patch = PatchSet(response.text)
-    pr_line_data = ""
+    review_comment_list = ReviewCommentList(**response.json())
 
-    for patched_file in patch:
-        pr_line_data += f"File: {patched_file.path}\n"
-        for hunk in patched_file:
-            for line in hunk:
-                pr_line_data += f"{line.line_type}: {line.value.strip()}\n"
-    return pr_line_data
+    return review_comment_list

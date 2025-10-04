@@ -65,8 +65,17 @@ def github_webhook(request):
     # New commit pushed to existing PR
     elif event == "pull_request" and request.data.get("action") == "synchronize":
         try:
-            payload = GithubPRChanged(**request.data)
-            print(f"✅ Successfully parsed webhook payload for PR #{payload.number}: {payload.pull_request.title}")
+            print(f"🔍 Fetching diff content for PR #{payload.number}")
+            diff_text = get_pr_latest_commit_diff(payload)
+            print(f"📄 Retrieved diff content ({len(diff_text)} characters)")
+            
+            # ai
+            print(f"🤖 Running AI review on diff...")
+            review_response = review_pr(diff=diff_text)
+            print(f"📝 AI review completed with {len(review_response.issues) if review_response.issues else 0} issues found")
+            
+            post_pr_comments(payload, review_response=review_response)
+            print(f"✅ Successfully processed PR #{payload.number}")
         except Exception as e:
             print(f"Failed to parse webhook payload: {e}")
             print(f"Request data keys: {list(request.data.keys()) if hasattr(request, 'data') else 'No data'}")
