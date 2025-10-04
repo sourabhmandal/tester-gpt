@@ -27,9 +27,9 @@ def review_pr(diff: str) -> PRReviewResponse:
         raise ValueError("Diff content is empty or invalid")
     
     try:
-        flow_syntax_and_semantic_check(diff, model="gemini-2.5-pro")
+        return flow_syntax_and_semantic_check(diff, model="gemini-2.5-pro")
     except Exception as e:
-        logging.error(f"Error in review_diff: {e}")
+        logging.error(f"Error in review_pr: {e}")
         # Return a fallback response with proper structure
         fallback_response = PRReviewResponse(
             issues=[],
