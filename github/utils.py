@@ -39,20 +39,60 @@ def verify_signature(request_body: bytes, signature_header: str) -> bool:
 def generate_jwt() -> str:
     now = int(time.time())
     app_id, private_key = settings.GITHUB_APP_ID, settings.GITHUB_PRIVATE_KEY
+    
+    # Debug information
+    print(f"🔐 Generating JWT for GitHub App ID: {app_id}")
+    print(f"🔑 Private key length: {len(private_key) if private_key else 0} characters")
+    print(f"🔑 Private key starts with: {private_key[:50] if private_key else 'None'}...")
+    
+    if not app_id or app_id == 0:
+        raise ValueError("GitHub App ID is not configured")
+    
+    if not private_key:
+        raise ValueError("GitHub Private Key is not configured")
+    
     payload = {
         "iat": now - 60,   # issued at
         "exp": now + (10 * 60),  # JWT valid for 10 minutes
-        "iss": app_id,     # GitHub App ID
+        "iss": str(app_id),     # GitHub App ID (ensure it's a string)
     }
-    return jwt.encode(payload, private_key, algorithm="RS256")
+    
+    try:
+        token = jwt.encode(payload, private_key, algorithm="RS256")
+        print(f"✅ JWT generated successfully")
+        return token
+    except Exception as e:
+        print(f"❌ Failed to generate JWT: {e}")
+        raise
 
 
 def get_installation_token(jwt_token: str, installation_id: int) -> str:
     url = f"https://api.github.com/app/installations/{installation_id}/access_tokens"
     headers = {
         "Authorization": f"Bearer {jwt_token}",
-        "Accept": "application/vnd.github+json"
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
     }
-    resp = requests.post(url, headers=headers)
-    resp.raise_for_status()
-    return resp.json()["token"]
+    
+    print(f"🔗 Requesting installation token from: {url}")
+    print(f"📋 JWT token length: {len(jwt_token)} characters")
+    
+    try:
+        resp = requests.post(url, headers=headers)
+        print(f"📡 GitHub API response status: {resp.status_code}")
+        
+        if resp.status_code != 201:
+            print(f"❌ Error response: {resp.text}")
+            print(f"❌ Response headers: {dict(resp.headers)}")
+        
+        resp.raise_for_status()
+        token_data = resp.json()
+        print(f"✅ Installation token obtained successfully")
+        return token_data["token"]
+    except requests.exceptions.HTTPError as e:
+        print(f"❌ HTTP Error getting installation token: {e}")
+        print(f"❌ Response content: {resp.text if 'resp' in locals() else 'No response'}")
+        raise
+    except Exception as e:
+        print(f"❌ Unexpected error getting installation token: {e}")
+        raise

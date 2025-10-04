@@ -205,8 +205,8 @@ class GithubPRChanged(Schema):
     action: str
     number: int
     pull_request: GitHubPullRequest
-    before: str
-    after: str
+    before: Optional[str] = None
+    after: Optional[str] = None
     repository: GitHubRepository
     sender: GitHubUser
     installation: GitHubInstallation

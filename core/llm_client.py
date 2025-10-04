@@ -51,14 +51,22 @@ def review_diff(diff: str, model="gemini-2.5-pro") -> PRReviewResponse:
         
         For each issue found, specify:
         - type: "error", "warning", or "suggestion"
-        - line: line number or range where the issue occurs  
+        - line: Use the NEW file line number (the number after + in diff hunks) for added/modified lines
         - message: clear description of the issue
         - severity: "high", "medium", or "low"
-        - file: the file path from the diff (look for lines starting with '+++' or 'diff --git')
+        - file: Extract the file path from diff headers, removing 'a/' or 'b/' prefixes
         
-        IMPORTANT: Extract the file path from diff headers like:
-        - "diff --git a/path/to/file.py b/path/to/file.py"
-        - "+++ b/path/to/file.py"
+        CRITICAL FILE PATH EXTRACTION:
+        - From "diff --git a/path/to/file.py b/path/to/file.py" → use "path/to/file.py"
+        - From "+++ b/path/to/file.py" → use "path/to/file.py"
+        - From "--- a/path/to/file.py" → use "path/to/file.py"
+        - Remove any 'a/' or 'b/' prefixes from file paths
+        
+        CRITICAL LINE NUMBER EXTRACTION:
+        - For issues on added lines (starting with +), use the line number from the NEW file
+        - Look at diff hunk headers like @@ -old_start,old_count +new_start,new_count @@
+        - Count line numbers from the new_start position for added lines
+        - Only report line numbers for lines that actually exist in the diff
         
         Provide an overall summary of the changes and any recommendations.
         """
