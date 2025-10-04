@@ -16,20 +16,30 @@ def get_pr_latest_commit_diff(pr: GithubPRChanged) -> str:
     response = requests.get(commits_url)
     response.raise_for_status()  # Raise an exception for bad status codes
 
-    commit_list = GithubCommitList(**response.json())
+    commit_list = GithubCommitList(response.json())
 
-    if not commit_list.commits:
+    if not commit_list.root:
         raise ValueError("No commits found in the pull request")
-    latest_commit = commit_list.commits[-1]
+    latest_commit = commit_list.root[-1]
     if not latest_commit or not latest_commit.sha:
         raise ValueError("Latest commit data is invalid")
 
     diff_url = latest_commit.commit.url
     response = requests.get(diff_url)
     response.raise_for_status()  # Raise an exception for bad status codes
-    response_data = response.json()
-    response_data = GithubCommitDetail(**response_data)
-    patch = PatchSet(response_data.files)
+    
+    commit_detail = GithubCommitDetail(**response.json())
+    
+    # Create patch from the files' patch data
+    patch_text = ""
+    for file in commit_detail.files:
+        if file.patch:
+            patch_text += file.patch + "\n"
+    
+    if not patch_text:
+        return "No patch data available for this commit"
+    
+    patch = PatchSet(patch_text)
     pr_line_data = ""
 
     for patched_file in patch:
