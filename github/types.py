@@ -1,6 +1,7 @@
 from ninja import Schema
 from typing import List, Optional
 from datetime import datetime
+from pydantic import RootModel
 
 
 class GitHubUser(Schema):
@@ -210,3 +211,96 @@ class GithubPRChanged(Schema):
     repository: GitHubRepository
     sender: GitHubUser
     installation: GitHubInstallation
+
+
+class GitHubCommitAuthor(Schema):
+    name: str
+    email: str
+    date: str
+
+
+class GitHubCommitTree(Schema):
+    sha: str
+    url: str
+
+
+class GitHubCommitVerification(Schema):
+    verified: bool
+    reason: str
+    signature: Optional[str]
+    payload: Optional[str]
+    verified_at: Optional[str]
+
+
+class GitHubCommitDetails(Schema):
+    author: GitHubCommitAuthor
+    committer: GitHubCommitAuthor
+    message: str
+    tree: GitHubCommitTree
+    url: str
+    comment_count: int
+    verification: GitHubCommitVerification
+
+
+class GitHubCommitParent(Schema):
+    sha: str
+    url: str
+    html_url: str
+
+
+class GitHubCommitStats(Schema):
+    total: int
+    additions: int
+    deletions: int
+
+
+class GitHubCommitFile(Schema):
+    sha: str
+    filename: str
+    status: str
+    additions: int
+    deletions: int
+    changes: int
+    blob_url: str
+    raw_url: str
+    contents_url: str
+    patch: Optional[str] = None
+
+
+class GithubCommit(Schema):
+    sha: str
+    node_id: str
+    commit: GitHubCommitDetails
+    url: str
+    html_url: str
+    comments_url: str
+    author: Optional[GitHubUser]
+    committer: Optional[GitHubUser]
+    parents: List[GitHubCommitParent]
+
+
+class GithubCommitDetail(Schema):
+    """
+    Detailed GitHub commit information including file changes and statistics.
+    Used for single commit API responses that include diff information.
+    """
+    sha: str
+    node_id: str
+    commit: GitHubCommitDetails
+    url: str
+    html_url: str
+    comments_url: str
+    author: Optional[GitHubUser]
+    committer: Optional[GitHubUser]
+    parents: List[GitHubCommitParent]
+    stats: GitHubCommitStats
+    files: List[GitHubCommitFile]
+
+
+class GithubCommitList(RootModel[List[GithubCommit]]):
+    """
+    Represents a list of GitHub commits as a root model.
+    This allows direct array validation without a wrapper field.
+    """
+    root: List[GithubCommit]
+
