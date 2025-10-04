@@ -68,8 +68,8 @@ def github_webhook(request):
             print(f"🔍 Fetching diff content for PR #{payload.number}")
             diff_text = get_pr_latest_commit_diff(payload)
             print(f"📄 Retrieved diff content ({len(diff_text)} characters)")
-            
-            # ai
+
+            # ai-review
             print(f"🤖 Running AI review on diff...")
             review_response = review_pr(diff=diff_text)
             print(f"📝 AI review completed with {len(review_response.issues) if review_response.issues else 0} issues found")
