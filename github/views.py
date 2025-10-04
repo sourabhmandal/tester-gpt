@@ -7,8 +7,8 @@ import requests
 from typing import Dict, Optional, Tuple
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from core.llm_client import review_diff
-from github.service import get_pr_content
+from core.llm_client import review_pr
+from github.service import get_pr_diff, get_pr_latest_commit_diff
 from rest_framework.response import Response
 from github.types import GithubPRChanged
 from core.types import PRReviewResponse
@@ -32,8 +32,8 @@ def github_webhook(request):
     if event == "ping":
         return Response({"msg": "pong"}, status=200)
     
-    # Only process pull request related events
-    if event == "pull_request" and request.data.get("action") in ["opened", "synchronize"]:
+    # PR Opened for first time
+    if event == "pull_request" and request.data.get("action") == "opened":
         try:
             payload = GithubPRChanged(**request.data)
             print(f"✅ Successfully parsed webhook payload for PR #{payload.number}: {payload.pull_request.title}")
@@ -44,12 +44,12 @@ def github_webhook(request):
         
         try:
             print(f"🔍 Fetching diff content for PR #{payload.number}")
-            diff_text = get_pr_content(payload)
+            diff_text = get_pr_diff(payload)
             print(f"📄 Retrieved diff content ({len(diff_text)} characters)")
             
             # ai
             print(f"🤖 Running AI review on diff...")
-            review_response = review_diff(diff=diff_text)
+            review_response = review_pr(diff=diff_text)
             print(f"📝 AI review completed with {len(review_response.issues) if review_response.issues else 0} issues found")
             
             post_pr_comments(payload, review_response=review_response)
@@ -57,7 +57,31 @@ def github_webhook(request):
         except Exception as e:
             print(f"Error processing pull request: {e}")
             return Response({"error": "Failed to process pull request"}, status=500)
-    
+    # New commit pushed to existing PR
+    elif event == "pull_request" and request.data.get("action") == "synchronize":
+        try:
+            payload = GithubPRChanged(**request.data)
+            print(f"✅ Successfully parsed webhook payload for PR #{payload.number}: {payload.pull_request.title}")
+        except Exception as e:
+            print(f"Failed to parse webhook payload: {e}")
+            print(f"Request data keys: {list(request.data.keys()) if hasattr(request, 'data') else 'No data'}")
+            return Response({"error": "Invalid payload structure"}, status=400)
+
+        try:
+            print(f"🔍 Fetching diff content for PR #{payload.number}")
+            diff_text = get_pr_latest_commit_diff(payload)
+            print(f"📄 Retrieved diff content ({len(diff_text)} characters)")
+            
+            # ai
+            print(f"🤖 Running AI review on diff...")
+            review_response = review_pr(diff=diff_text)
+            print(f"📝 AI review completed with {len(review_response.issues) if review_response.issues else 0} issues found")
+            
+            post_pr_comments(payload, review_response=review_response)
+            print(f"✅ Successfully processed PR #{payload.number}")
+        except Exception as e:
+            print(f"Error processing pull request: {e}")
+            return Response({"error": "Failed to process pull request"}, status=500)
     return Response("", status=204)
 
 def post_pr_comments(payload: GithubPRChanged, review_response: PRReviewResponse):
