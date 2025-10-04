@@ -42,6 +42,11 @@ def github_webhook(request):
             print(f"Request data keys: {list(request.data.keys()) if hasattr(request, 'data') else 'No data'}")
             return Response({"error": "Invalid payload structure"}, status=400)
         
+        if not payload.pull_request.state == "open":
+            print(f"PR #{payload.number} is not open, skipping processing")
+            return Response({"msg": "PR not open, skipping"}, status=200)
+        
+        # Fetch diff
         try:
             print(f"🔍 Fetching diff content for PR #{payload.number}")
             diff_text = get_pr_diff(payload)
@@ -67,6 +72,11 @@ def github_webhook(request):
             print(f"Request data keys: {list(request.data.keys()) if hasattr(request, 'data') else 'No data'}")
             return Response({"error": "Invalid payload structure"}, status=400)
 
+        if not payload.pull_request.state == "open":
+            print(f"PR #{payload.number} is not open, skipping processing")
+            return Response({"msg": "PR not open, skipping"}, status=200)
+
+        # Fetch diff
         try:
             print(f"🔍 Fetching diff content for PR #{payload.number}")
             diff_text = get_pr_latest_commit_diff(payload)
