@@ -9,35 +9,21 @@ def get_pr_latest_commit_diff(pr: GithubPRChanged, github_token: str = None) -> 
     if not pr or not pr.pull_request:
         raise ValueError("Invalid pull request data provided")
     
-    # Get the latest commit SHA from the PR head
-    latest_commit_sha = pr.pull_request.head.sha
-    repo_full_name = pr.repository.full_name
+    diff_url = pr.pull_request.diff_url
+    if not diff_url:
+        raise ValueError("Pull request diff URL not found")
     
-    # Use GitHub API to get the specific commit patch
-    commit_patch_url = f"https://api.github.com/repos/{repo_full_name}/commits/{latest_commit_sha}"
+    response = requests.get(diff_url)
+    response.raise_for_status()  # Raise an exception for bad status codes
     
-    headers = {
-        "Accept": "application/vnd.github.patch",  # Returns patch format
-        "X-GitHub-Api-Version": "2022-11-28"
-    }
-    
-    if github_token:
-        headers["Authorization"] = f"Bearer {github_token}"
-    
-    response = requests.get(commit_patch_url, headers=headers)
-    response.raise_for_status()
-    
-    # Parse the patch using unidiff
     patch = PatchSet(response.text)
-    pr_line_data = f"Latest Commit: {latest_commit_sha}\n\n"
+    pr_line_data = ""
 
     for patched_file in patch:
         pr_line_data += f"File: {patched_file.path}\n"
         for hunk in patched_file:
             for line in hunk:
                 pr_line_data += f"{line.line_type}: {line.value.strip()}\n"
-        pr_line_data += "\n"
-    
     return pr_line_data
 
 def get_pr_diff(pr: GithubPRChanged) -> str:
