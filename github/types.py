@@ -284,6 +284,7 @@ class GithubCommitDetail(Schema):
     Detailed GitHub commit information including file changes and statistics.
     Used for single commit API responses that include diff information.
     """
+
     sha: str
     node_id: str
     commit: GitHubCommitDetails
@@ -302,6 +303,7 @@ class GithubCommitList(RootModel[List[GithubCommit]]):
     Represents a list of GitHub commits as a root model.
     This allows direct array validation without a wrapper field.
     """
+
     root: List[GithubCommit]
 
 
@@ -310,6 +312,7 @@ class GithubCommitDetailList(RootModel[List[GithubCommitDetail]]):
     Represents a list of detailed GitHub commits with file changes and stats.
     Used when the API returns commits with full diff information.
     """
+
     root: List[GithubCommitDetail]
 
 
@@ -366,5 +369,5 @@ class ReviewCommentList(RootModel[List[ReviewComment]]):
     Represents a list of GitHub pull request review comments.
     Used for PR review comments API responses.
     """
-    root: List[ReviewComment]
 
+    root: List[ReviewComment]
