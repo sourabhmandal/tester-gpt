@@ -24,8 +24,9 @@ def get_pr_latest_commit_diff(pr: GithubPRChanged) -> str:
     if not latest_commit or not latest_commit.sha:
         raise ValueError("Latest commit data is invalid")
 
-    diff_url = latest_commit.commit.url
-    response = requests.get(diff_url)
+    # Get the detailed commit with file changes using the GitHub API
+    commit_detail_url = f"https://api.github.com/repos/{pr.repository.full_name}/commits/{latest_commit.sha}"
+    response = requests.get(commit_detail_url)
     response.raise_for_status()  # Raise an exception for bad status codes
     
     commit_detail = GithubCommitDetail(**response.json())
