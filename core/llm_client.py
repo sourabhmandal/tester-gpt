@@ -1,6 +1,7 @@
 import logging
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
+from github.types import GithubPRChanged
 from testergpt.settings import settings
 from core.types import PRReviewResponse
 
@@ -20,8 +21,25 @@ def get_llm(model="gemini-2.5-pro", temperature=0.2):
         logging.error(f"Failed to initialize LLM client: {e}")
         raise
 
-def review_diff(diff: str, model="gemini-2.5-pro") -> PRReviewResponse:
+def review_pr(diff: str) -> PRReviewResponse:
     """Send a diff to LLM and return structured JSON response"""
+    if not diff or not diff.strip():
+        raise ValueError("Diff content is empty or invalid")
+    
+    try:
+        return flow_syntax_and_semantic_check(diff, model="gemini-2.5-pro")
+    except Exception as e:
+        logging.error(f"Error in review_pr: {e}")
+        # Return a fallback response with proper structure
+        fallback_response = PRReviewResponse(
+            issues=[],
+            summary=f"Error occurred during code review: {str(e)}"
+        )
+        return fallback_response
+
+
+def flow_syntax_and_semantic_check(diff: str, model="gemini-2.5-pro") -> PRReviewResponse:
+    """Perform syntax and semantic analysis on code diff"""
     if not diff or not diff.strip():
         raise ValueError("Diff content is empty or invalid")
     
@@ -32,29 +50,56 @@ def review_diff(diff: str, model="gemini-2.5-pro") -> PRReviewResponse:
         structured_llm = llm.with_structured_output(PRReviewResponse)
 
         template = """
-        You are an AI code reviewer. Analyze the provided git diff and provide feedback.
-        
+        You are an AI code syntax and semantic analyzer. Focus specifically on syntax validation and semantic correctness of the provided git diff.
+
         Diff:
         ```diff
         {diff}
         ```
         
-        Instructions:
-        - Only analyze lines starting with '+' or '-' (added/removed code)
-        - Ignore metadata lines (diff --git, index, ---, +++)
-        - Look for potential issues in:
-          * Correctness and logic errors
-          * Code readability and maintainability  
-          * Security vulnerabilities
-          * Performance concerns
-          * Best practices violations
+        SYNTAX AND SEMANTIC ANALYSIS INSTRUCTIONS:
+        - Perform comprehensive syntax validation on all added/modified code (lines starting with '+')
+        - Check for semantic correctness and logical consistency
+        - Validate proper language-specific syntax rules
+        - Identify potential runtime errors and type mismatches
+        - Check for proper variable declarations and scope issues
+        - Validate function/method signatures and return types
+        - Ensure proper import statements and module usage
+        - Check for undefined variables, functions, or classes
+        - Validate proper exception handling patterns
+        - Identify potential null/undefined reference errors
+        
+        LINTING CHECKS:
+        - Code formatting and style consistency
+        - Naming conventions (variables, functions, classes)
+        - Proper indentation and whitespace usage
+        - Missing or incorrect docstrings/comments
+        - Unused imports or variables
+        - Overly complex functions or expressions
+        - Magic numbers or hardcoded values
+        - Proper error handling practices
+        
+        LANGUAGE-SPECIFIC CHECKS:
+        For Python:
+        - PEP 8 compliance
+        - Proper use of list comprehensions vs loops
+        - Correct exception handling with try/except
+        - Type hints usage and correctness
+        - Proper use of f-strings vs format()
+        
+        For JavaScript/TypeScript:
+        - ESLint rule compliance
+        - Proper async/await usage
+        - Type safety (for TypeScript)
+        - Proper Promise handling
+        - Variable declaration best practices (const/let)
         
         For each issue found, specify:
-        - type: "error", "warning", or "suggestion"
-        - line: Use the NEW file line number (the number after + in diff hunks) for added/modified lines
-        - message: clear description of the issue
-        - severity: "high", "medium", or "low"
-        - file: Extract the file path from diff headers, removing 'a/' or 'b/' prefixes
+        - type: "error" for syntax errors, "warning" for potential issues, "suggestion" for style improvements
+        - line: Use the NEW file line number from diff hunks for added/modified lines
+        - message: Clear description focusing on syntax/semantic issue
+        - severity: "high" for syntax errors, "medium" for semantic issues, "low" for style suggestions
+        - file: Extract file path from diff headers, removing 'a/' or 'b/' prefixes
         
         CRITICAL FILE PATH EXTRACTION:
         - From "diff --git a/path/to/file.py b/path/to/file.py" → use "path/to/file.py"
@@ -64,11 +109,11 @@ def review_diff(diff: str, model="gemini-2.5-pro") -> PRReviewResponse:
         
         CRITICAL LINE NUMBER EXTRACTION:
         - For issues on added lines (starting with +), use the line number from the NEW file
-        - Look at diff hunk headers like @@ -old_start,old_count +new_start,new_count @@
+        - Parse diff hunk headers like @@ -old_start,old_count +new_start,new_count @@
         - Count line numbers from the new_start position for added lines
         - Only report line numbers for lines that actually exist in the diff
         
-        Provide an overall summary of the changes and any recommendations.
+        Provide a summary focusing on syntax correctness, semantic validity, and code quality improvements.
         """
 
         prompt = ChatPromptTemplate.from_template(template)
@@ -82,10 +127,10 @@ def review_diff(diff: str, model="gemini-2.5-pro") -> PRReviewResponse:
         return response
         
     except Exception as e:
-        logging.error(f"Error in review_diff: {e}")
+        logging.error(f"Error in syntax_and_lint_check: {e}")
         # Return a fallback response with proper structure
         fallback_response = PRReviewResponse(
             issues=[],
-            summary=f"Error occurred during code review: {str(e)}"
+            summary=f"Error occurred during syntax and semantic analysis: {str(e)}"
         )
         return fallback_response
