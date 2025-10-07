@@ -24,4 +24,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("healthz/", health_check, name="health_check"),
     path("github/", include("github.urls"), name="github_integration"),
+    path("tester/", include("tester.urls"), name="tester_integration"),
+    # path("reviewer/", include("reviewer.urls"), name="reviewer_integration"),
 ]

@@ -2,12 +2,11 @@
 Github related integrations
 """
 
-import json
 import requests
 from typing import Dict, Optional, Tuple
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from core.llm_client import review_pr
+from core.llm_client import flow_test_planner, review_pr
 from github.service import get_pr_diff, get_pr_latest_commit_diff
 from rest_framework.response import Response
 from github.types import GithubPRChanged
@@ -85,10 +84,11 @@ def github_webhook(request):
             # ai-review
             print(f"🤖 Running AI review on diff...")
             review_response = review_pr(diff=diff_text)
+            test_plan = flow_test_planner(diff=diff_text)
             print(
                 f"📝 AI review completed with {len(review_response.issues) if review_response.issues else 0} issues found"
             )
-
+            print(test_plan)
             post_pr_comments(payload, review_response=review_response)
             print(f"✅ Successfully processed PR #{payload.number}")
         except Exception as e:
